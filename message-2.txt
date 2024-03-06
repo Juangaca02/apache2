@@ -1,0 +1,61 @@
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.sql.Statement;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.annotation.WebServlet;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
+import conexion.ConnMysql;
+
+@WebServlet(urlPatterns = {"/s2"})
+public class s2 extends HttpServlet {
+
+    protected void processRequest(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        response.setContentType("text/html;charset=UTF-8");
+        try (PrintWriter out = response.getWriter()) {
+            HttpSession session = request.getSession();
+
+            String usuario = request.getParameter("username");
+            String pass = request.getParameter("password");
+
+            // Validar si los parámetros son nulos o vacíos
+            if (usuario == null || usuario.isEmpty() || pass == null || pass.isEmpty()) {
+                out.println("Por favor, proporcione un nombre de usuario y una contraseña.");
+                return;
+            }
+
+            try (Connection conn = new ConnMysql().getConnection()) {
+                // Utilizar PreparedStatement para evitar SQL Injection
+                String insertQuery = "INSERT INTO usuario (nombre, pass) VALUES (?, ?)";
+                try (PreparedStatement pstmt = conn.prepareStatement(insertQuery)) {
+                    pstmt.setString(1, usuario);
+                    pstmt.setString(2, pass);
+
+                    // Ejecutar la inserción
+                    int rowsAffected = pstmt.executeUpdate();
+
+                    if (rowsAffected > 0) {
+                        out.println("Usuario registrado exitosamente.");
+                    } else {
+                        out.println("Error al registrar el usuario.");
+                    }
+                }
+            } catch (SQLException ex) {
+                // Manejar la excepción
+                out.println("Error en la base de datos: " + ex.getMessage());
+            }
+        }
+    }
+
+    @Override
+    protected void doPost(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        processRequest(request, response); // Manejar la excepción
+    }
+}
